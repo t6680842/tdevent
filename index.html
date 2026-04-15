@@ -80,6 +80,22 @@ const PROXY_URL='https://wild-hill-606c.kshin0225.workers.dev';const esc=v=>Stri
  return [];
 }function openModal(src){document.getElementById('modalImg').src=src;document.getElementById('modal').classList.remove('hidden');}function closeModal(){document.getElementById('modal').classList.add('hidden');}let lastData=null;
 async function loadData(){let id=document.getElementById('event').value.trim();const m=id.match(/ticketdive\.com\/event\/([^/?#]+)/);if(m)id=m[1];if(!id)return alert('入力してください');const st=document.getElementById('status');st.textContent='取得中...';try{const r=await fetch(PROXY_URL+'?event='+encodeURIComponent(id));const data=await r.json();lastData=data;render(data);st.textContent='取得完了';}catch(e){st.textContent='エラー:'+e.message;}}function render(data){renderEvent(data);renderTable(data);renderCountdown(data);}function renderEvent(data){const ev=findEvent(data)||{};const stages=findStages(data);let venue='',open='',start='',artists='';if(stages.length){const s=stages[0];venue=(s.venue&&s.venue.name)||s.stageName||'';open=fmtJST(s.openVenue);start=fmtJST(s.startStage);artists=(s.artists||[]).map(a=>a.name).join(', ');}const imgs=[ev.topImage,...(ev.additionalImages||[])].filter(Boolean).map(u=>`<img src="${u}" onclick="openModal('${u}')" class="h-32 object-cover rounded-xl cursor-pointer border border-slate-600">`).join('');document.getElementById('eventBlock').innerHTML=`<div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4"><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${imgs}</div><div class="text-2xl font-bold">${esc(ev.name||'')}</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm"><div><b>会場:</b> ${esc(venue)}</div><div><b>開場:</b> ${esc(open)}</div><div><b>開演:</b> ${esc(start)}</div><div><b>出演:</b> ${esc(artists)}</div><div class="md:col-span-2"><b>URL:</b> <a class="text-blue-600 underline" target="_blank" href="https://ticketdive.com/event/${esc(ev.url||'')}">https://ticketdive.com/event/${esc(ev.url||'')}</a></div></div><div class="whitespace-pre-wrap text-sm text-slate-200 border-t pt-3">${esc(ev.detail||'')}</div></div>`;}function renderTable(data){
+ const list=findTicket(data);
+ const el=document.getElementById('tableBlock');
+ if(!Array.isArray(list)||!list.length){el.innerHTML='なし';return;}
+ const mobile=window.innerWidth<640;
+ if(mobile){
+  let html='';
+  for(const g of list){
+   const q=(g.customize||g.customizeList||[]).map(i=>{const opts=(i.selectOptions||[]).filter(x=>!x.hidden).map(x=>x.value).join(', ');return '<div class="mt-1"><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';}).join('')||'なし';
+   const pay=(g.paymentChannels||[]).map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x).join(' / ')||'なし';
+   for(const t of (g.ticketTypes||[])){
+    html+=`<div class="bg-slate-800 border border-slate-600 rounded-xl shadow p-3 mb-3 space-y-1 text-sm"><div class="font-bold text-base">${esc(g.name||'')} / ${esc(t.name||'')}</div><div><b>詳細:</b> ${esc(t.detail||'')}</div><div><b>最大購入可能枚数:</b> ${esc(t.maxNumPerApply||'')}</div><div><b>支払い方法:</b> ${pay}</div><div><b>販売開始日時:</b> ${fmtJST(g.startApply)}</div><div><b>アンケート:</b> ${q}</div></div>`;
+   }
+  }
+  el.innerHTML=html;return;
+ }
+ let html='';
 const list=findTicket(data);
 const el=document.getElementById('tableBlock');
 if(!Array.isArray(list)||!list.length){el.innerHTML='なし';return;}
