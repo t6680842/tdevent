@@ -9,10 +9,9 @@
 <body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow p-6 space-y-4">
 <h1 class="text-2xl font-bold">TicketDive Event Viewer</h1>
-<p class="text-sm text-slate-600">Cloudflare Workers Proxy URL と event_id を入力して取得してください。</p>
-<div class="grid md:grid-cols-3 gap-4">
-<input id="proxy" class="border rounded-xl p-3 md:col-span-2" placeholder="https://your-worker.workers.dev">
-<input id="event" class="border rounded-xl p-3" placeholder="event_id">
+<p class="text-sm text-slate-600">event URL または event_id を入力して取得してください。</p>
+<div class="grid md:grid-cols-1 gap-4">
+<input id="event" class="border rounded-xl p-3" placeholder="event_id または https://ticketdive.com/event/12345">
 </div>
 <button onclick="loadData()" class="bg-blue-600 text-white rounded-xl px-4 py-3 w-full">取得</button>
 <div id="status" class="text-sm text-slate-600"></div>
@@ -35,12 +34,14 @@
 function esc(v){return String(v ?? '').replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];});}
 
 async function loadData(){
-  const proxy = document.getElementById('proxy').value.trim();
-  const eventId = document.getElementById('event').value.trim();
+  const proxy = 'https://wild-hill-606c.kshin0225.workers.dev/';
+  let eventId = document.getElementById('event').value.trim();
+  const m = eventId.match(/ticketdive\.com\/event\/([^/?#]+)/);
+  if(m){ eventId = m[1]; }
   const status = document.getElementById('status');
 
-  if(!proxy || !eventId){
-    alert('proxy URL と event_id を入力してください');
+  if(!eventId){
+    alert('event URL または event_id を入力してください');
     return;
   }
 
