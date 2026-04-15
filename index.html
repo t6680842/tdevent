@@ -26,8 +26,8 @@
 </div>
 </div>
 <div>
-<h2 class="font-semibold mb-2">JSON</h2>
-<pre id="json" class="bg-slate-900 text-slate-100 rounded-xl p-4 overflow-auto text-xs min-h-64"></pre>
+<h2 class="font-semibold mb-2">ticketInfoList</h2>
+<div id="json" class="overflow-auto"></div>
 </div>
 </div>
 <script>
@@ -64,7 +64,7 @@ async function loadData(){
 }
 
 function render(data){
-  document.getElementById('json').textContent = JSON.stringify(data, null, 2);
+  renderTicketTable(data);
 
   const page = data.pageProps || (data.props ? data.props.pageProps : null) || data;
   const ev = page.event || page;
@@ -92,6 +92,35 @@ function render(data){
   }
 
   document.getElementById('tickets').innerHTML = html;
+}
+
+function renderTicketTable(data){
+  const page = data.pageProps || (data.props ? data.props.pageProps : null) || data;
+  const ev = page.event || page;
+  const list = ev.ticketInfoList || [];
+  const target = document.getElementById('json');
+  if(!list.length){ target.innerHTML='<div class="text-sm text-slate-500">ticketInfoList なし</div>'; return; }
+  let html='<table class="min-w-full text-sm border border-slate-300"><thead><tr class="bg-slate-100"><th class="border p-2">販売枠</th><th class="border p-2">券種</th><th class="border p-2">価格</th><th class="border p-2">状態</th><th class="border p-2">販売開始</th><th class="border p-2">販売終了</th><th class="border p-2">カスタム項目</th></tr></thead><tbody>';
+  for(let i=0;i<list.length;i++){
+    const group=list[i];
+    const types=group.ticketTypes||[];
+    const customs=group.customize||group.customizeList||[];
+    let customText='';
+    for(let c=0;c<customs.length;c++){
+      const item=customs[c];
+      const opts=(item.selectOptions||[]).filter(o=>!o.hidden).map(o=>o.value).join(', ');
+      customText += (c?'<hr>':'') + '<b>'+esc(item.label||'')+'</b><br>'+esc(opts);
+    }
+    if(!types.length){
+      html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2"></td><td class="border p-2"></td><td class="border p-2">'+esc(group.status||'')+'</td><td class="border p-2">'+esc(group.startApply||group.release||'')+'</td><td class="border p-2">'+esc(group.endApply||'')+'</td><td class="border p-2">'+customText+'</td></tr>';
+    }
+    for(let j=0;j<types.length;j++){
+      const t=types[j];
+      html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2">'+esc(t.name||'')+'</td><td class="border p-2">'+esc(t.price||'')+'</td><td class="border p-2">'+esc(t.status||group.status||'')+'</td><td class="border p-2">'+esc(group.startApply||group.release||'')+'</td><td class="border p-2">'+esc(group.endApply||'')+'</td><td class="border p-2">'+customText+'</td></tr>';
+    }
+  }
+  html+='</tbody></table>';
+  target.innerHTML=html;
 }
 </script>
 </body>
