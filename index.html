@@ -4,12 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TicketDive Event Viewer</title>
-<script src="https://cdn.tailwindcss.com">window.addEventListener('resize',()=>{if(lastData) render(lastData);});
+<script src="https://cdn.tailwindcss.com">function renderCountdown(data){
+const el=document.getElementById('countdown');
+const list=findTicket(data);
+let future=[];
+for(const g of list){const d=new Date(g.startApply);if(!isNaN(d))future.push(d);}
+future.sort((a,b)=>a-b);
+if(!future.length){el.textContent='';return;}
+let target=future.find(x=>x>new Date())||future[0];
+function tick(){
+ const now=new Date();
+ const diff=target-now;
+ if(diff<=0){el.textContent='販売中';el.className='text-lg font-bold text-emerald-400';return;}
+ const dd=Math.floor(diff/86400000);
+ const hh=Math.floor(diff%86400000/3600000);
+ const mm=Math.floor(diff%3600000/60000);
+ const ss=Math.floor(diff%60000/1000);
+ el.textContent='販売開始まで あと '+(dd?dd+'日 ':'')+hh+'時間 '+mm+'分 '+ss+'秒';
+ if(diff<=600000){el.className='text-lg font-bold text-red-400 animate-pulse';}
+ else if(diff<=3600000){el.className='text-lg font-bold text-yellow-300';}
+ else{el.className='text-lg font-bold text-emerald-400';}
+}
+tick();
+clearInterval(window.__cdTimer);
+window.__cdTimer=setInterval(tick,1000);
+}window.addEventListener('resize',()=>{if(lastData) render(lastData);});
 window.addEventListener('orientationchange',()=>{if(lastData) render(lastData);});
 </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6">
-<div class="max-w-full mx-auto space-y-6"><div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4"><h1 class="text-2xl font-bold">TicketDive Event Viewer</h1><input id="event" class="border border-slate-600 bg-slate-700 text-slate-100 rounded-xl p-3 w-full" placeholder="event_id または https://ticketdive.com/event/12345"><button onclick="loadData()" class="bg-blue-500 text-white rounded-xl px-4 py-3 w-full">取得</button><div id="status" class="text-sm text-slate-300"></div></div><div id="eventBlock"></div><div class="bg-slate-800 rounded-2xl shadow p-6"><h2 class="text-xl font-bold mb-4">チケット情報</h2><div id="tableBlock" class="overflow-auto"></div></div></div><div id="modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onclick="closeModal()">
+<div class="max-w-full mx-auto space-y-6"><div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4"><h1 class="text-2xl font-bold">TicketDive Event Viewer</h1><input id="event" class="border border-slate-600 bg-slate-700 text-slate-100 rounded-xl p-3 w-full" placeholder="event_id または https://ticketdive.com/event/12345"><button onclick="loadData()" class="bg-blue-500 text-white rounded-xl px-4 py-3 w-full">取得</button><div id="status" class="text-sm text-slate-300"></div>
+<div id="countdown" class="text-lg font-bold text-emerald-400"></div></div><div id="eventBlock"></div><div class="bg-slate-800 rounded-2xl shadow p-6"><h2 class="text-xl font-bold mb-4">チケット情報</h2><div id="tableBlock" class="overflow-auto"></div></div></div><div id="modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onclick="closeModal()">
 <img id="modalImg" class="max-w-full max-h-full rounded-xl">
 </div>
 <script>
@@ -28,7 +53,7 @@ const PROXY_URL='https://wild-hill-606c.kshin0225.workers.dev';const esc=v=>Stri
  if(Array.isArray(deep)) return [{name:'チケット',ticketTypes:deep}];
  return [];
 }function openModal(src){document.getElementById('modalImg').src=src;document.getElementById('modal').classList.remove('hidden');}function closeModal(){document.getElementById('modal').classList.add('hidden');}let lastData=null;
-async function loadData(){let id=document.getElementById('event').value.trim();const m=id.match(/ticketdive\.com\/event\/([^/?#]+)/);if(m)id=m[1];if(!id)return alert('入力してください');const st=document.getElementById('status');st.textContent='取得中...';try{const r=await fetch(PROXY_URL+'?event='+encodeURIComponent(id));const data=await r.json();lastData=data;render(data);st.textContent='取得完了';}catch(e){st.textContent='エラー:'+e.message;}}function render(data){renderEvent(data);renderTable(data);}function renderEvent(data){const ev=findEvent(data)||{};const stages=findStages(data);let venue='',open='',start='',artists='';if(stages.length){const s=stages[0];venue=(s.venue&&s.venue.name)||s.stageName||'';open=fmtJST(s.openVenue);start=fmtJST(s.startStage);artists=(s.artists||[]).map(a=>a.name).join(', ');}const imgs=[ev.topImage,...(ev.additionalImages||[])].filter(Boolean).map(u=>`<img src="${u}" onclick="openModal('${u}')" class="h-32 object-cover rounded-xl cursor-pointer border border-slate-600">`).join('');document.getElementById('eventBlock').innerHTML=`<div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4"><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${imgs}</div><div class="text-2xl font-bold">${esc(ev.name||'')}</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm"><div><b>会場:</b> ${esc(venue)}</div><div><b>開場:</b> ${esc(open)}</div><div><b>開演:</b> ${esc(start)}</div><div><b>出演:</b> ${esc(artists)}</div><div class="md:col-span-2"><b>URL:</b> <a class="text-blue-600 underline" target="_blank" href="https://ticketdive.com/event/${esc(ev.url||'')}">https://ticketdive.com/event/${esc(ev.url||'')}</a></div></div><div class="whitespace-pre-wrap text-sm text-slate-200 border-t pt-3">${esc(ev.detail||'')}</div></div>`;}function renderTable(data){
+async function loadData(){let id=document.getElementById('event').value.trim();const m=id.match(/ticketdive\.com\/event\/([^/?#]+)/);if(m)id=m[1];if(!id)return alert('入力してください');const st=document.getElementById('status');st.textContent='取得中...';try{const r=await fetch(PROXY_URL+'?event='+encodeURIComponent(id));const data=await r.json();lastData=data;render(data);st.textContent='取得完了';}catch(e){st.textContent='エラー:'+e.message;}}function render(data){renderEvent(data);renderTable(data);renderCountdown(data);}function renderEvent(data){const ev=findEvent(data)||{};const stages=findStages(data);let venue='',open='',start='',artists='';if(stages.length){const s=stages[0];venue=(s.venue&&s.venue.name)||s.stageName||'';open=fmtJST(s.openVenue);start=fmtJST(s.startStage);artists=(s.artists||[]).map(a=>a.name).join(', ');}const imgs=[ev.topImage,...(ev.additionalImages||[])].filter(Boolean).map(u=>`<img src="${u}" onclick="openModal('${u}')" class="h-32 object-cover rounded-xl cursor-pointer border border-slate-600">`).join('');document.getElementById('eventBlock').innerHTML=`<div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4"><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${imgs}</div><div class="text-2xl font-bold">${esc(ev.name||'')}</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm"><div><b>会場:</b> ${esc(venue)}</div><div><b>開場:</b> ${esc(open)}</div><div><b>開演:</b> ${esc(start)}</div><div><b>出演:</b> ${esc(artists)}</div><div class="md:col-span-2"><b>URL:</b> <a class="text-blue-600 underline" target="_blank" href="https://ticketdive.com/event/${esc(ev.url||'')}">https://ticketdive.com/event/${esc(ev.url||'')}</a></div></div><div class="whitespace-pre-wrap text-sm text-slate-200 border-t pt-3">${esc(ev.detail||'')}</div></div>`;}function renderTable(data){
 const list=findTicket(data);
 const el=document.getElementById('tableBlock');
 if(!Array.isArray(list)||!list.length){el.innerHTML='なし';return;}
