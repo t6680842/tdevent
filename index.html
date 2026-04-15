@@ -10,39 +10,45 @@
 <script>
 function renderCountdown(data){
  const el=document.getElementById('countdown');
- if(!el) return;
+ if(!el)return;
+
  const list=findTicket(data);
  let future=[];
+
  for(const g of list){
-   const d=new Date(g.startApply);
-   if(!isNaN(d)) future.push(d);
+  const d=new Date(g.startApply);
+  if(!isNaN(d))future.push(d);
  }
+
  future.sort((a,b)=>a-b);
  if(!future.length){el.textContent='';return;}
+
  const now=new Date();
  let target=future.find(x=>x>now)||future[0];
 
  function tick(){
-   const diff=target-new Date();
-   if(diff<=0){
-     el.textContent='販売中';
-     el.className='text-lg font-bold text-emerald-400';
-     return;
-   }
-   const dd=Math.floor(diff/86400000);
-   const hh=Math.floor(diff%86400000/3600000);
-   const mm=Math.floor(diff%3600000/60000);
-   const ss=Math.floor(diff%60000/1000);
+  const diff=target-new Date();
 
-   el.textContent='販売開始まで あと '+(dd?dd+'日 ':'')+hh+'時間 '+mm+'分 '+ss+'秒';
+  if(diff<=0){
+   el.textContent='販売中';
+   el.className='text-lg font-bold text-emerald-400';
+   return;
+  }
 
-   if(diff<=600000){
-     el.className='text-lg font-bold text-red-400 animate-pulse';
-   }else if(diff<=3600000){
-     el.className='text-lg font-bold text-yellow-300';
-   }else{
-     el.className='text-lg font-bold text-emerald-400';
-   }
+  const dd=Math.floor(diff/86400000);
+  const hh=Math.floor(diff%86400000/3600000);
+  const mm=Math.floor(diff%3600000/60000);
+  const ss=Math.floor(diff%60000/1000);
+
+  el.textContent='販売開始まで あと '+(dd?dd+'日 ':'')+hh+'時間 '+mm+'分 '+ss+'秒';
+
+  if(diff<=600000){
+   el.className='text-lg font-bold text-red-400 animate-pulse';
+  }else if(diff<=3600000){
+   el.className='text-lg font-bold text-yellow-300';
+  }else{
+   el.className='text-lg font-bold text-emerald-400';
+  }
  }
 
  tick();
@@ -60,17 +66,21 @@ window.addEventListener('orientationchange',()=>{if(window.lastData) render(wind
 <div class="max-w-full mx-auto space-y-6">
 
 <div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4">
+
 <h1 class="text-2xl font-bold">TicketDive Event</h1>
 
-<input id="event" class="border border-slate-600 bg-slate-700 text-slate-100 rounded-xl p-3 w-full"
+<input id="event"
+class="border border-slate-600 bg-slate-700 text-slate-100 rounded-xl p-3 w-full"
 placeholder="event_id または https://ticketdive.com/event/12345">
 
-<button onclick="loadData()" class="bg-blue-500 text-white rounded-xl px-4 py-3 w-full">
+<button onclick="loadData()"
+class="bg-blue-500 text-white rounded-xl px-4 py-3 w-full">
 取得
 </button>
 
 <div id="status" class="text-sm text-slate-300"></div>
 <div id="countdown" class="text-lg font-bold text-emerald-400"></div>
+
 </div>
 
 <div id="eventBlock"></div>
@@ -82,7 +92,9 @@ placeholder="event_id または https://ticketdive.com/event/12345">
 
 </div>
 
-<div id="modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onclick="closeModal()">
+<div id="modal"
+class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+onclick="closeModal()">
 <img id="modalImg" class="max-w-full max-h-full rounded-xl">
 </div>
 
@@ -92,19 +104,31 @@ const PROXY_URL='https://wild-hill-606c.kshin0225.workers.dev';
 
 const esc=v=>String(v??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 
+
 const fmtJST=v=>{
  if(!v)return'';
  const d=new Date(v);
  if(isNaN(d))return v;
- return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
+
+ const w=['日','月','火','水','木','金','土'][d.getDay()];
+
+ const Y=d.getFullYear();
+ const M=String(d.getMonth()+1).padStart(2,'0');
+ const D=String(d.getDate()).padStart(2,'0');
+ const h=String(d.getHours()).padStart(2,'0');
+ const m=String(d.getMinutes()).padStart(2,'0');
+ const s=String(d.getSeconds()).padStart(2,'0');
+
+ return `${Y}年${M}月${D}日(${w}) ${h}:${m}:${s}`;
 };
+
 
 function findKey(o,k){
  if(!o||typeof o!=='object')return null;
  if(o[k]!==undefined)return o[k];
  for(const x in o){
-   const r=findKey(o[x],k);
-   if(r!==null)return r;
+  const r=findKey(o[x],k);
+  if(r!==null)return r;
  }
  return null;
 }
@@ -117,11 +141,18 @@ function findTicket(o){
  const candidates=[
   o?.pageProps?.eventDetail?.ticketInfoList,
   o?.eventDetail?.ticketInfoList,
+  o?.pageProps?.ticketInfoList,
+  o?.props?.pageProps?.eventDetail?.ticketInfoList,
   findKey(o,'ticketInfoList')
  ];
+
  for(const c of candidates){
   if(Array.isArray(c)&&c.length) return c;
  }
+
+ const deep=findKey(o,'ticketTypes');
+ if(Array.isArray(deep)) return [{name:'チケット',ticketTypes:deep}];
+
  return [];
 }
 
@@ -144,8 +175,8 @@ async function loadData(){
  if(m) id=m[1];
 
  if(!id){
-   alert('入力してください');
-   return;
+  alert('入力してください');
+  return;
  }
 
  const st=document.getElementById('status');
@@ -153,16 +184,18 @@ async function loadData(){
 
  try{
 
-   const r=await fetch(PROXY_URL+'?event='+encodeURIComponent(id));
-   const data=await r.json();
+  const r=await fetch(PROXY_URL+'?event='+encodeURIComponent(id));
+  const data=await r.json();
 
-   lastData=data;
-   render(data);
+  lastData=data;
+  render(data);
 
-   st.textContent='取得完了';
+  st.textContent='取得完了';
 
  }catch(e){
-   st.textContent='エラー:'+e.message;
+
+  st.textContent='エラー:'+e.message;
+
  }
 
 }
@@ -181,23 +214,50 @@ function renderEvent(data){
  let venue='',open='',start='',artists='';
 
  if(stages.length){
+
   const s=stages[0];
-  venue=(s.venue&&s.venue.name)||'';
+
+  venue=(s.venue&&s.venue.name)||s.stageName||'';
   open=fmtJST(s.openVenue);
   start=fmtJST(s.startStage);
   artists=(s.artists||[]).map(a=>a.name).join(', ');
+
  }
+
+ const imgs=[ev.topImage,...(ev.additionalImages||[])]
+ .filter(Boolean)
+ .map(u=>`<img src="${u}" onclick="openModal('${u}')" class="h-32 object-cover rounded-xl cursor-pointer border border-slate-600">`)
+ .join('');
 
  document.getElementById('eventBlock').innerHTML=`
  <div class="bg-slate-800 rounded-2xl shadow p-6 space-y-4">
-   <div class="text-2xl font-bold">${esc(ev.name||'')}</div>
-   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-   <div><b>会場:</b> ${esc(venue)}</div>
-   <div><b>開場:</b> ${esc(open)}</div>
-   <div><b>開演:</b> ${esc(start)}</div>
-   <div><b>出演:</b> ${esc(artists)}</div>
-   </div>
+
+ <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+ ${imgs}
+ </div>
+
+ <div class="text-2xl font-bold">${esc(ev.name||'')}</div>
+
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+ <div><b>会場:</b> ${esc(venue)}</div>
+ <div><b>開場:</b> ${esc(open)}</div>
+ <div><b>開演:</b> ${esc(start)}</div>
+ <div><b>出演:</b> ${esc(artists)}</div>
+ <div class="md:col-span-2">
+ <b>URL:</b>
+ <a class="text-blue-400 underline" target="_blank"
+ href="https://ticketdive.com/event/${esc(ev.url||'')}">
+ https://ticketdive.com/event/${esc(ev.url||'')}
+ </a>
+ </div>
+ </div>
+
+ <div class="whitespace-pre-wrap text-sm text-slate-200 border-t pt-3">
+ ${esc(ev.detail||'')}
+ </div>
+
  </div>`;
+
 }
 
 function renderTable(data){
@@ -210,23 +270,109 @@ function renderTable(data){
   return;
  }
 
- let html='<table class="w-full text-sm border border-slate-600">';
+ const mobile=window.innerWidth<640;
+
+ if(mobile){
+
+  let html='';
+
+  for(const g of list){
+
+   const q=(g.customize||g.customizeList||[]).map(i=>{
+
+    const opts=(i.selectOptions||[])
+    .filter(x=>!x.hidden)
+    .map(x=>x.value)
+    .join(', ');
+
+    return '<div class="mt-1"><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';
+
+   }).join('') || 'なし';
+
+   const pay=(g.paymentChannels||[])
+   .map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x)
+   .join(' / ')||'なし';
+
+   for(const t of (g.ticketTypes||[])){
+
+    html+=`
+
+    <div class="bg-slate-800 border border-slate-600 rounded-xl shadow p-3 mb-3 space-y-1 text-sm">
+
+    <div class="font-bold text-base">${esc(g.name||'')} / ${esc(t.name||'')}</div>
+
+    <div><b>詳細:</b> ${esc(t.detail||'')}</div>
+
+    <div><b>最大購入可能枚数:</b> ${esc(t.maxNumPerApply||'')}</div>
+
+    <div><b>支払い方法:</b> ${pay}</div>
+
+    <div><b>販売開始日時:</b> ${fmtJST(g.startApply)}</div>
+
+    <div><b>アンケート:</b> ${q}</div>
+
+    </div>`;
+
+   }
+
+  }
+
+  el.innerHTML=html;
+  return;
+ }
+
+ let html='<table class="w-full text-xs sm:text-sm border border-slate-600">';
  html+='<thead><tr class="bg-slate-700">';
  html+='<th class="border p-2">販売枠</th>';
  html+='<th class="border p-2">券種</th>';
+ html+='<th class="border p-2">詳細</th>';
  html+='<th class="border p-2">最大購入可能枚数</th>';
- html+='<th class="border p-2">販売開始</th>';
+ html+='<th class="border p-2">支払い方法</th>';
+ html+='<th class="border p-2">販売開始日時</th>';
+ html+='<th class="border p-2">アンケート</th>';
  html+='</tr></thead><tbody>';
 
  for(const g of list){
+
+  const q=(g.customize||g.customizeList||[]).map(i=>{
+
+   const opts=(i.selectOptions||[])
+   .filter(x=>!x.hidden)
+   .map(x=>x.value)
+   .join(', ');
+
+   return '<div><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';
+
+  }).join('') || 'なし';
+
+  const pay=(g.paymentChannels||[])
+  .map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x)
+  .join(' / ')||'なし';
+
   for(const t of (g.ticketTypes||[])){
-   html+=`<tr>
-   <td class="border p-2">${esc(g.name)}</td>
-   <td class="border p-2">${esc(t.name)}</td>
+
+   html+=`
+
+   <tr>
+
+   <td class="border p-2">${esc(g.name||'')}</td>
+
+   <td class="border p-2">${esc(t.name||'')}</td>
+
+   <td class="border p-2">${esc(t.detail||'')}</td>
+
    <td class="border p-2">${esc(t.maxNumPerApply||'')}</td>
-   <td class="border p-2">${fmtJST(g.startApply)}</td>
+
+   <td class="border p-2">${pay}</td>
+
+   <td class="border p-2">${fmtJST(g.startApply||g.release)}</td>
+
+   <td class="border p-2">${q}</td>
+
    </tr>`;
+
   }
+
  }
 
  html+='</tbody></table>';
