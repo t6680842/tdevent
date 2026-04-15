@@ -9,7 +9,7 @@
 <body class="bg-slate-100 min-h-screen p-6">
 <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow p-6 space-y-4">
 <h1 class="text-2xl font-bold">TicketDive Event Viewer</h1>
-<p class="text-sm text-slate-600">event URL または event_id を入力して取得してください。</p>
+<p class="text-sm text-slate-600">event URL または event_id を入力して取得してください。Proxy URLは固定設定です。</p>
 <div class="grid md:grid-cols-1 gap-4">
 <input id="event" class="border rounded-xl p-3" placeholder="event_id または https://ticketdive.com/event/12345">
 </div>
@@ -34,7 +34,7 @@
 function esc(v){return String(v ?? '').replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];});}
 
 async function loadData(){
-  const proxy = 'https://wild-hill-606c.kshin0225.workers.dev/';
+  const proxy = 'https://wild-hill-606c.kshin0225.workers.dev';
   let eventId = document.getElementById('event').value.trim();
   const m = eventId.match(/ticketdive\.com\/event\/([^/?#]+)/);
   if(m){ eventId = m[1]; }
@@ -94,10 +94,18 @@ function render(data){
   document.getElementById('tickets').innerHTML = html;
 }
 
+function findTicketInfoList(obj){
+  if(!obj || typeof obj !== 'object') return [];
+  if(Array.isArray(obj.ticketInfoList)) return obj.ticketInfoList;
+  for(const key in obj){
+    const found = findTicketInfoList(obj[key]);
+    if(found && found.length) return found;
+  }
+  return [];
+}
+
 function renderTicketTable(data){
-  const page = data.pageProps || (data.props ? data.props.pageProps : null) || data;
-  const ev = page.event || page;
-  const list = ev.ticketInfoList || [];
+  const list = findTicketInfoList(data);
   const target = document.getElementById('json');
   if(!list.length){ target.innerHTML='<div class="text-sm text-slate-500">ticketInfoList なし</div>'; return; }
   let html='<table class="min-w-full text-sm border border-slate-300"><thead><tr class="bg-slate-100"><th class="border p-2">販売枠</th><th class="border p-2">券種</th><th class="border p-2">価格</th><th class="border p-2">状態</th><th class="border p-2">販売開始</th><th class="border p-2">販売終了</th><th class="border p-2">カスタム項目</th></tr></thead><tbody>';
