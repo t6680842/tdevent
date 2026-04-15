@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicketDive Event Viewer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6">
+<div class="max-w-5xl mx-auto bg-white rounded-2xl shadow p-6 space-y-4">
+<h1 class="text-2xl font-bold">TicketDive Event Viewer</h1>
+<p class="text-sm text-slate-600">Cloudflare Workers Proxy経由で TicketDive にアクセスします。event_id入力だけで利用できます。</p>
+<div class="grid md:grid-cols-2 gap-4">
+<input id="proxy" class="border rounded-xl p-3" placeholder="https://your-worker.workers.dev">
+
+
+<input id="event" class="border rounded-xl p-3" placeholder="event_id">
+<button onclick="loadData()" class="bg-blue-600 text-white rounded-xl p-3">取得</button>
+</div>
+<div id="status" class="text-sm text-slate-600"></div>
+<div class="grid md:grid-cols-2 gap-6">
+<div>
+<h2 class="font-semibold mb-2">概要</h2>
+<div id="summary" class="space-y-2 text-sm"></div>
+</div>
+<div>
+<h2 class="font-semibold mb-2">チケット</h2>
+<div id="tickets" class="space-y-2 text-sm"></div>
+</div>
+</div>
+<div>
+<h2 class="font-semibold mb-2">JSON</h2>
+<pre id="json" class="bg-slate-900 text-slate-100 rounded-xl p-4 overflow-auto text-xs"></pre>
+</div>
+</div>
+<script>
+function esc(v){return String(v??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+async function autoBuild(){ return true; }catch(e){document.getElementById('status').textContent='build_id取得失敗: '+e.message}
+ }
+
+async function loadData(){
+ let build='';
+ const proxy=document.getElementById('proxy').value.trim();
+ const event=document.getElementById('event').value.trim();
+ if(!proxy||!event){alert('proxy URL と event_id を入力してください');return}
+  const url=`${proxy}?event=${encodeURIComponent(event)}`;
+ document.getElementById('status').textContent='取得中...';
+ try{
+   const res=await fetch(url);
+   const json=await res.json();
+   render(json);
+   document.getElementById('status').textContent='取得完了';
+ }catch(e){document.getElementById('status').textContent='エラー: '+e.message}
+}
+function render(data){
+ const page=data.pageProps||data.props?.pageProps||data;
+ const ev=page.event||page;
+ document.getElementById('summary').innerHTML=`<div><b>タイトル:</b> ${esc(ev.title)}</div><div><b>会場:</b> ${esc(ev.placeName||ev.place)}</div><div><b>日時:</b> ${esc(ev.startAt||ev.startDate)}</div>`;
+ const list=ev.ticketTypes||ev.tickets||[];
+ document.getElementById('tickets').innerHTML=list.map(t=>`<div class='border rounded-xl p-2'><div><b>${esc(t.name)}</b></div><div>価格: ${esc(t.price)}</div><div>在庫: ${esc(t.stock)}</div></div>`).join('')||'なし';
+ document.getElementById('json').textContent=JSON.stringify(data,null,2);
+}
+</script>
+</body>
+</html>
