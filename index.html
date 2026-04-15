@@ -93,6 +93,7 @@ if(mobile){
   }).join('') || 'なし';
   for(const t of (g.ticketTypes||[])){
  const pay=(g.paymentChannels||[]).map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x).join(' / ')||'なし';
+ const pay=(g.paymentChannels||[]).map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x).join(' / ')||'なし';
    html+=`<div class="bg-slate-800 border border-slate-600 rounded-xl shadow p-3 mb-3 space-y-1 text-sm">
    <div class="font-bold text-base">${esc(g.name||'')} / ${esc(t.name||'')}</div>
    <div><b>詳細:</b> ${esc(t.detail||'')}</div>
@@ -113,6 +114,7 @@ for(const g of list){
   return '<div><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';
  }).join('') || 'なし';
  for(const t of (g.ticketTypes||[])){
+ const pay=(g.paymentChannels||[]).map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x).join(' / ')||'なし';
   html+=`<tr><td class="border border-slate-600 p-1 sm:p-2">${esc(g.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.detail||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.maxNumPerApply||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${pay}</td><td class="border border-slate-600 p-1 sm:p-2">${fmtJST(g.startApply||g.release)}</td><td class="border border-slate-600 p-1 sm:p-2">${q}</td></tr>`;
  }
 }
