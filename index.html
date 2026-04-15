@@ -28,7 +28,33 @@ function tick(){
 tick();
 clearInterval(window.__cdTimer);
 window.__cdTimer=setInterval(tick,1000);
-}window.addEventListener('resize',()=>{if(lastData) render(lastData);});
+}function renderCountdown(data){
+const el=document.getElementById('countdown');
+if(!el)return;
+const list=findTicket(data);
+let future=[];
+for(const g of list){const d=new Date(g.startApply);if(!isNaN(d))future.push(d);}
+future.sort((a,b)=>a-b);
+if(!future.length){el.textContent='';return;}
+const now=new Date();
+let target=future.find(x=>x>now)||future[0];
+function tick(){
+ const diff=target-new Date();
+ if(diff<=0){el.textContent='販売中';el.className='text-lg font-bold text-emerald-400';return;}
+ const dd=Math.floor(diff/86400000);
+ const hh=Math.floor(diff%86400000/3600000);
+ const mm=Math.floor(diff%3600000/60000);
+ const ss=Math.floor(diff%60000/1000);
+ el.textContent='販売開始まで あと '+(dd?dd+'日 ':'')+hh+'時間 '+mm+'分 '+ss+'秒';
+ if(diff<=600000){el.className='text-lg font-bold text-red-400 animate-pulse';}
+ else if(diff<=3600000){el.className='text-lg font-bold text-yellow-300';}
+ else{el.className='text-lg font-bold text-emerald-400';}
+}
+tick();
+clearInterval(window.__cdTimer);
+window.__cdTimer=setInterval(tick,1000);
+}
+window.addEventListener('resize',()=>{if(lastData) render(lastData);});
 window.addEventListener('orientationchange',()=>{if(lastData) render(lastData);});
 </script>
 </head>
@@ -66,11 +92,12 @@ if(mobile){
    return '<div class="mt-1"><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';
   }).join('') || 'なし';
   for(const t of (g.ticketTypes||[])){
+ const pay=(g.paymentChannels||[]).map(x=>x==='card'?'カード':x==='konbini'?'コンビニ':x).join(' / ')||'なし';
    html+=`<div class="bg-slate-800 border border-slate-600 rounded-xl shadow p-3 mb-3 space-y-1 text-sm">
    <div class="font-bold text-base">${esc(g.name||'')} / ${esc(t.name||'')}</div>
    <div><b>詳細:</b> ${esc(t.detail||'')}</div>
    <div><b>最大購入可能枚数:</b> ${esc(t.maxNumPerApply||'')}</div>
-   <div><b>状態:</b> ${esc(t.status||g.status||'')}</div>
+   <div><b>支払い方法:</b> ${pay}</div>
    <div><b>販売開始日時:</b> ${fmtJST(g.startApply||g.release)}</div>
    <div><b>アンケート:</b> ${q}</div>
    </div>`;
@@ -79,14 +106,14 @@ if(mobile){
  el.innerHTML=html;
  return;
 }
-let html='<table class="w-full text-xs sm:text-sm border border-slate-600"><thead><tr class="bg-slate-700"><th class="border border-slate-600 p-1 sm:p-2">販売枠</th><th class="border border-slate-600 p-1 sm:p-2">券種</th><th class="border border-slate-600 p-1 sm:p-2">詳細</th><th class="border border-slate-600 p-1 sm:p-2">最大購入可能枚数</th><th class="border border-slate-600 p-1 sm:p-2">状態</th><th class="border border-slate-600 p-1 sm:p-2">販売開始日時</th><th class="border border-slate-600 p-1 sm:p-2">アンケート</th></tr></thead><tbody>';
+let html='<table class="w-full text-xs sm:text-sm border border-slate-600"><thead><tr class="bg-slate-700"><th class="border border-slate-600 p-1 sm:p-2">販売枠</th><th class="border border-slate-600 p-1 sm:p-2">券種</th><th class="border border-slate-600 p-1 sm:p-2">詳細</th><th class="border border-slate-600 p-1 sm:p-2">最大購入可能枚数</th><th class="border border-slate-600 p-1 sm:p-2">支払い方法</th><th class="border border-slate-600 p-1 sm:p-2">販売開始日時</th><th class="border border-slate-600 p-1 sm:p-2">アンケート</th></tr></thead><tbody>';
 for(const g of list){
  const q=(g.customize||g.customizeList||[]).map(i=>{
   const opts=(i.selectOptions||[]).filter(x=>!x.hidden).map(x=>x.value).join(', ');
   return '<div><b>'+esc(i.label||'')+'</b><br>'+esc(opts)+'</div>';
  }).join('') || 'なし';
  for(const t of (g.ticketTypes||[])){
-  html+=`<tr><td class="border border-slate-600 p-1 sm:p-2">${esc(g.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.detail||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.maxNumPerApply||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.status||g.status||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${fmtJST(g.startApply||g.release)}</td><td class="border border-slate-600 p-1 sm:p-2">${q}</td></tr>`;
+  html+=`<tr><td class="border border-slate-600 p-1 sm:p-2">${esc(g.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.name||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.detail||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${esc(t.maxNumPerApply||'')}</td><td class="border border-slate-600 p-1 sm:p-2">${pay}</td><td class="border border-slate-600 p-1 sm:p-2">${fmtJST(g.startApply||g.release)}</td><td class="border border-slate-600 p-1 sm:p-2">${q}</td></tr>`;
  }
 }
 html+='</tbody></table>';
