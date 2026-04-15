@@ -7,137 +7,34 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-6">
-<div class="max-w-5xl mx-auto bg-white rounded-2xl shadow p-6 space-y-4">
+<div class="max-w-6xl mx-auto space-y-6">
+<div class="bg-white rounded-2xl shadow p-6 space-y-4">
 <h1 class="text-2xl font-bold">TicketDive Event Viewer</h1>
 <p class="text-sm text-slate-600">event URL または event_id を入力して取得してください。</p>
-<div class="grid md:grid-cols-1 gap-4">
-<input id="event" class="border rounded-xl p-3" placeholder="event_id または https://ticketdive.com/event/12345">
-</div>
+<input id="event" class="border rounded-xl p-3 w-full" placeholder="event_id または https://ticketdive.com/event/12345">
 <button onclick="loadData()" class="bg-blue-600 text-white rounded-xl px-4 py-3 w-full">取得</button>
 <div id="status" class="text-sm text-slate-600"></div>
-<div class="grid md:grid-cols-2 gap-6">
-<div>
-<h2 class="font-semibold mb-2">概要</h2>
-<div id="summary" class="space-y-2 text-sm"></div>
 </div>
-<div>
-<h2 class="font-semibold mb-2">チケット</h2>
-<div id="tickets" class="space-y-2 text-sm"></div>
-</div>
-</div>
-<div>
-<h2 class="font-semibold mb-2">ticketInfoList</h2>
-<div id="json" class="overflow-auto"></div>
+<div id="eventBlock"></div>
+<div class="bg-white rounded-2xl shadow p-6">
+<h2 class="text-xl font-bold mb-4">ticketInfoList</h2>
+<div id="tableBlock" class="overflow-auto"></div>
 </div>
 </div>
 <script>
-function esc(v){return String(v ?? '').replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];});}
-
-async function loadData(){
-  const proxy = 'https://wild-hill-606c.kshin0225.workers.dev';
-  let eventId = document.getElementById('event').value.trim();
-  const m = eventId.match(/ticketdive\.com\/event\/([^/?#]+)/);
-  if(m){ eventId = m[1]; }
-  const status = document.getElementById('status');
-
-  if(!eventId){
-    alert('event URL または event_id を入力してください');
-    return;
-  }
-
-  status.textContent = '取得中...';
-  document.getElementById('summary').innerHTML = '';
-  document.getElementById('tickets').innerHTML = '';
-
-  try {
-    const res = await fetch(proxy + '?event=' + encodeURIComponent(eventId));
-    if(!res.ok){
-      throw new Error('HTTP ' + res.status);
-    }
-
-    const data = await res.json();
-    render(data);
-    status.textContent = '取得完了';
-  } catch(e) {
-    status.textContent = 'エラー: ' + e.message;
-  }
-}
-
-function render(data){
-  renderTicketTable(data);
-
-  const page = data.pageProps || (data.props ? data.props.pageProps : null) || data;
-  const ev = page.event || page;
-
-  document.getElementById('summary').innerHTML =
-    '<div><b>タイトル:</b> ' + esc(ev.title || '') + '</div>' +
-    '<div><b>会場:</b> ' + esc(ev.placeName || ev.place || '') + '</div>' +
-    '<div><b>日時:</b> ' + esc(ev.startAt || ev.startDate || '') + '</div>';
-
-  const tickets = ev.ticketTypes || ev.tickets || [];
-
-  if(!tickets.length){
-    document.getElementById('tickets').innerHTML = 'なし';
-    return;
-  }
-
-  let html = '';
-  for(let i=0;i<tickets.length;i++){
-    const t = tickets[i];
-    html += '<div class="border rounded-xl p-3 mb-2">' +
-      '<div><b>' + esc(t.name || '') + '</b></div>' +
-      '<div>価格: ' + esc(t.price || '') + '</div>' +
-      '<div>在庫: ' + esc(t.stock || '') + '</div>' +
-      '</div>';
-  }
-
-  document.getElementById('tickets').innerHTML = html;
-}
-
-function fmtJST(v){
-  if(!v) return '';
-  const d=new Date(v);
-  if(isNaN(d)) return esc(v);
-  return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-
-function findTicketInfoList(obj){
-  if(!obj || typeof obj !== 'object') return [];
-  if(Array.isArray(obj.ticketInfoList)) return obj.ticketInfoList;
-  for(const key in obj){
-    const found = findTicketInfoList(obj[key]);
-    if(found && found.length) return found;
-  }
-  return [];
-}
-
-function renderTicketTable(data){
-  const list = findTicketInfoList(data);
-  const target = document.getElementById('json');
-  if(!list.length){ target.innerHTML='<div class="text-sm text-slate-500">ticketInfoList なし</div>'; return; }
-  let html='<table class="min-w-full text-sm border border-slate-300"><thead><tr class="bg-slate-100"><th class="border p-2">販売枠</th><th class="border p-2">券種</th><th class="border p-2">詳細</th><th class="border p-2">最大購入可能枚数</th><th class="border p-2">状態</th><th class="border p-2">販売開始(JST)</th><th class="border p-2">販売終了(JST)</th><th class="border p-2">アンケート</th></tr></thead><tbody>';
-  for(let i=0;i<list.length;i++){
-    const group=list[i];
-    const types=group.ticketTypes||[];
-    const customs=group.customize||group.customizeList||[];
-    let customText='';
-    for(let c=0;c<customs.length;c++){
-      const item=customs[c];
-      const opts=(item.selectOptions||[]).filter(o=>!o.hidden).map(o=>o.value).join(', ');
-      customText += (c?'<hr>':'') + '<b>'+esc(item.label||'')+'</b><br>'+esc(opts);
-    }
-    if(customText){ customText = '<details><summary class="cursor-pointer text-blue-600">表示</summary><div class="mt-2">'+customText+'</div></details>'; }
-    if(!types.length){
-      html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2"></td><td class="border p-2"></td><td class="border p-2"></td><td class="border p-2">'+esc(group.status||'')+'</td><td class="border p-2">'+fmtJST(group.startApply||group.release||'')+'</td><td class="border p-2">'+fmtJST(group.endApply||'')+'</td><td class="border p-2">'+customText+'</td></tr>';
-    }
-    for(let j=0;j<types.length;j++){
-      const t=types[j];
-      html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2">'+esc(t.name||'')+'</td><td class="border p-2">'+esc(t.detail||'')+'</td><td class="border p-2">'+esc(t.maxNumPerApply||'')+'</td><td class="border p-2">'+esc(t.status||group.status||'')+'</td><td class="border p-2">'+fmtJST(group.startApply||group.release||'')+'</td><td class="border p-2">'+fmtJST(group.endApply||'')+'</td><td class="border p-2">'+customText+'</td></tr>';
-    }
-  }
-  html+='</tbody></table>';
-  target.innerHTML=html;
-}
+const PROXY_URL='https://wild-hill-606c.kshin0225.workers.dev';
+function esc(v){return String(v??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function fmtJST(v){if(!v)return '';const d=new Date(v);if(isNaN(d))return esc(v);return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});} 
+function findKey(obj,key){if(!obj||typeof obj!=='object')return null;if(obj[key]!==undefined)return obj[key];for(const k in obj){const r=findKey(obj[k],key);if(r!==null)return r;}return null;}
+function findTicketInfoList(obj){const r=findKey(obj,'ticketInfoList');return Array.isArray(r)?r:[];}
+function findEvent(obj){const r=findKey(obj,'event');return r&&typeof r==='object'?r:null;}
+function findStages(obj){const r=findKey(obj,'stages');return Array.isArray(r)?r:[];}
+async function loadData(){let eventId=document.getElementById('event').value.trim();const m=eventId.match(/ticketdive\.com\/event\/([^/?#]+)/);if(m)eventId=m[1];if(!eventId){alert('event URL または event_id を入力してください');return;}const status=document.getElementById('status');status.textContent='取得中...';try{const res=await fetch(PROXY_URL+'?event='+encodeURIComponent(eventId));if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();render(data);status.textContent='取得完了';}catch(e){status.textContent='エラー: '+e.message;}}
+function render(data){renderEvent(data);renderTable(data);} 
+function renderEvent(data){const ev=findEvent(data);const stages=findStages(data);const el=document.getElementById('eventBlock');if(!ev){el.innerHTML='';return;}let venue='',open='',start='',artists=[];if(stages.length){const s=stages[0];venue=(s.venue&&s.venue.name)||s.stageName||'';open=fmtJST(s.openVenue);start=fmtJST(s.startStage);artists=(s.artists||[]).map(a=>a.name);}el.innerHTML='<div class="bg-white rounded-2xl shadow p-6 space-y-3"><div class="text-2xl font-bold">'+esc(ev.name||'')+'</div><div class="grid md:grid-cols-2 gap-3 text-sm"><div><b>会場:</b> '+esc(venue)+'</div><div><b>問い合わせ:</b> '+esc(ev.inquiry||'')+'</div><div><b>開場:</b> '+esc(open)+'</div><div><b>開演:</b> '+esc(start)+'</div><div class="md:col-span-2"><b>出演:</b> '+esc(artists.join(', '))+'</div></div><div class="whitespace-pre-wrap text-sm text-slate-700 border-t pt-3">'+esc(ev.detail||'')+'</div></div>';}
+function renderTable(data){const list=findTicketInfoList(data);const el=document.getElementById('tableBlock');if(!list.length){el.innerHTML='<div class="text-slate-500">ticketInfoList なし</div>';return;}let html='<table class="min-w-full text-sm border border-slate-300"><thead><tr class="bg-slate-100"><th class="border p-2">販売枠</th><th class="border p-2">券種</th><th class="border p-2">詳細</th><th class="border p-2">最大購入可能枚数</th><th class="border p-2">状態</th><th class="border p-2">販売開始(JST)</th><th class="border p-2">販売終了(JST)</th><th class="border p-2">アンケート</th></tr></thead><tbody>';for(const group of list){const customs=group.customize||group.customizeList||[];let q='';for(const item of customs){const opts=(item.selectOptions||[]).filter(o=>!o.hidden).map(o=>o.value).join(', ');q+='<div class="mb-2"><b>'+esc(item.label||'')+'</b><br>'+esc(opts)+'</div>';}const types=group.ticketTypes||[];if(!types.length){html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2"></td><td class="border p-2"></td><td class="border p-2"></td><td class="border p-2">'+esc(group.status||'')+'</td><td class="border p-2">'+fmtJST(group.startApply||group.release)+'</td><td class="border p-2">'+fmtJST(group.endApply)+'</td><td class="border p-2">'+q+'</td></tr>';}
+for(const t of types){html+='<tr><td class="border p-2">'+esc(group.name||'')+'</td><td class="border p-2">'+esc(t.name||'')+'</td><td class="border p-2">'+esc(t.detail||'')+'</td><td class="border p-2">'+esc(t.maxNumPerApply||'')+'</td><td class="border p-2">'+esc(t.status||group.status||'')+'</td><td class="border p-2">'+fmtJST(group.startApply||group.release)+'</td><td class="border p-2">'+fmtJST(group.endApply)+'</td><td class="border p-2">'+q+'</td></tr>';}}
+html+='</tbody></table>';el.innerHTML=html;}
 </script>
 </body>
 </html>
